@@ -1,4 +1,4 @@
-Proyecto de Monitoreo de Logs con ELK Stack
+# Proyecto de Monitoreo de Logs con ELK Stack
 Este proyecto utiliza Elasticsearch, Logstash, Kibana y Filebeat para monitorear y analizar logs. A continuación se detallan los pasos para poner en marcha el proyecto.
 
 Instrucciones
