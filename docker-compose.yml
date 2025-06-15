@@ -1,0 +1,61 @@
+version: '3.7'
+
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
+    container_name: elasticsearch
+    ports:
+      - "9200:9200"
+    environment:
+      - discovery.type=single-node #Configura Elasticsearch para ejecutarse en modo de nodo único
+      - xpack.security.enabled=false #Deshabilita la seguridad de X-Pack; en un entorno de pruebas no vamos realizar conexiones https ni utilizar SSL
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD} #Establece la contraseña de la cuenta de superusuario de Elasticsearch a través de nuestras variables de entorno en .env
+    volumes:
+      - es_data:/usr/share/elasticsearch/data #Monta un volumen para almacenar los datos de Elasticsearch de manera persistente
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:${STACK_VERSION}
+    container_name: kibana
+    ports:
+      - "5601:5601"
+    environment:
+      - SERVERNAME=kibana
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200 #Configura Kibana para que se conecte a Elasticsearch en la URL host de este servicio
+      - ELASTICSEARCH_USERNAME=kibana_system
+      - ELASTICSEARCH_PASSWORD=${KIBANA_PASSWORD}
+    depends_on:
+      - elasticsearch
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:${STACK_VERSION}
+    container_name: logstash
+    volumes:
+      - ./logstash.conf:/usr/share/logstash/pipeline/logstash.conf:ro #Monta el archivo de configuración de Logstash (en modo lectura por razones de seguridad pero desactivable si necesitamos modificarlo en tiempo de ejecución) 
+    ports:
+      - "5044:5044"
+      - "9600:9600"
+    environment:
+      - xpack.monitoring.enabled=false
+      - ELASTIC_USER=elastic
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+      - ELASTIC_HOSTS=https://elasticsearch:9200
+    depends_on:
+      - elasticsearch
+
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:${STACK_VERSION}
+    container_name: filebeat
+    user: root
+    volumes:
+      - ./filebeat.yml:/usr/share/filebeat/filebeat.yml 
+      - ./logs/syslog:/var/log/syslog               # Logs personalizados para syslog
+      - ./logs/nginx:/var/log/nginx                 # Logs específicos para Nginx
+      - ./logs/auth:/var/log/auth                   # Logs de autenticación
+      - ./logs/apache2:/var/log/apache2             # Logs específicos para Apache
+      - ./logs/custom-app:/var/log/custom-app       # Logs de una aplicación personalizada
+    command: ["filebeat", "-e", "-strict.perms=false"] #Ejecuta Filebeat en modo de ejecución y deshabilita la verificación de permisos de forma que pueda leer los archivos de log de los contenedores de logstash y enviarlos a Elasticsearch 
+    depends_on:
+      - logstash
+
+volumes:
+  es_data:

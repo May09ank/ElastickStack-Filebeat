@@ -1,0 +1,40 @@
+filebeat.inputs: #Configura los inputs de Filebeat para leer los archivos de log de los contenedores de Logstash (las entradas de datos)
+  - type: log #Tipo de input: log
+    enabled: true #Habilita el input de entrada
+    paths: #Rutas de los archivos de log que Filebeat va a leer
+      - /var/log/syslog/syslog.log
+    fields: #Campos personalizados para los datos de log que Filebeat va a enviar a Elasticsearch
+      source: syslog
+
+  - type: log
+    enabled: true
+    paths:
+      - /var/log/nginx/access.log
+      - /var/log/nginx/error.log
+    fields:
+      source: nginx
+
+  - type: log
+    enabled: true
+    paths:
+      - /var/log/auth/auth.log
+    fields:
+      source: auth
+
+  - type: log
+    enabled: true
+    paths:
+      - /var/log/apache2/access.log
+      - /var/log/apache2/error.log
+    fields:
+      source: apache
+
+  - type: log
+    enabled: true
+    paths:
+      - /var/log/custom-app/*.log
+    fields:
+      source: custom_app
+
+output.logstash: #Configura la salida de Filebeat para enviar los datos de log a Logstash
+  hosts: ["logstash:5044"] #Dirección y puerto de Logstash
